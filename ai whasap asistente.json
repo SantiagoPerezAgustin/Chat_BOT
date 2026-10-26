@@ -1,0 +1,932 @@
+{
+  "name": "ai whasap asistente",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').first().json.body.data.message.conversation || $('Webhook').first().json.body.data.message.extendedTextMessage.text }}",
+        "options": {
+          "systemMessage": "Sos un Asistente Virtual Comercial y Administrador para el e-commerce Bichtec. Tu objetivo es asesorar a los clientes, gestionar el catálogo, administrar carritos de compra y cerrar ventas de forma amable, profesional y concisa (respuestas breves ideales para WhatsApp).\n\nHERRAMIENTAS DISPONIBLES (TOOLS):\n1. 'identificar_cliente_y_carrito': Invócala si necesitas verificar la identidad del cliente o consultar qué productos tiene en su carrito activo.\n2. 'buscar_productos_catalogo': Invócala OBLIGATORIAMENTE siempre que el cliente consulte por modelos, disponibilidad, catálogo, precios o características en tiempo real (Qdrant).\n3. 'agregar_al_carrito': Invócala cuando un cliente quiera AGREGAR un producto a su carrito de compras.\n4. 'quitar_del_carrito': Invócala cuando un cliente solicite eliminar o sacar un producto de su carrito.\n5. 'finalizar_compra': Invócala ÚNICAMENTE cuando el usuario confirme explícitamente que desea CERRAR O FINALIZAR LA COMPRA.\n6. 'generar_link_pago': Invócala ÚNICAMENTE después de haber ejecutado 'finalizar_compra'.\n\nREGLAS DE FLUJO Y PASOS OBLIGATORIOS (CRÍTICO):\n- CONTENCIÓN Y LÍMITES: Responde únicamente sobre productos del catálogo. Si el usuario pregunta por algo que la herramienta 'buscar_productos_catalogo' no devuelve, responde strictly: \"No tenemos disponible ese producto en este momento.\" No sugieras alternativas ni inventes información.\n- PROHIBIDO HACER TODO DE UNA VEZ: Jamás ejecutes 'finalizar_compra' ni 'generar_link_pago' si el cliente solo pidió agregar un producto o preguntó un precio.\n- PASO 1 (AGREGAR AL CARRITO): Cuando el cliente pida agregar algo (ej: \"quiero agregar la funda de iPhone 13\"), invocas SOLAMENTE 'agregar_al_carrito'. Le confirmas que fue agregado al carrito, le indicas el subtotal y le preguntas de forma amigable: \"¿Deseas agregar algo más o querés finalizar la compra?\".\n- PASO 2 (CONFIRMACIÓN DE CHECKOUT): Solo si el usuario responde expresamente que quiere pagar o finalizar (ej: \"quiero pagar\", \"finalizar compra\", \"no, nada más\"), ejecutas en este estricto orden:\n  1° Invocás 'finalizar_compra'.\n  2° Con el 'pedido_id' y 'total' devueltos, invocás 'generar_link_pago'.\n  3° Le envías el número de pedido, total y la plantilla de pago.\n\nREGLAS DE PRIVACIDAD DE INVENTARIO:\n- NUNCA menciones la cantidad numérica de stock disponible. Simplemente confirma si el producto está disponible o agotado sin dar cifras.\n\nESTILO DE COMUNICACIÓN:\n- Sé amigable, servicial, directo al grano y utiliza emojis de forma natural.\n- Respuestas cortas aptas para WhatsApp.\n- Nunca inventes datos ni enlaces que no hayan sido devueltos por las herramientas.\n\nAl momento de confirmar el pedido y solicitar el pago al cliente, envía las opciones disponibles usando exactamente esta plantilla:\n\n---\n🛒 *¡Tu Pedido #[ID] está listo!*\n\n🔗 *Opción 1: Pago online (Tarjeta / Mercado Pago)*\n👉 [Link de Mercado Pago]\n\n🏛️ *Opción 2: Transferencia bancaria (Sin comisión)*\n- Alias: bichtec.153\n- CVU: 0000003100097348530289\n- Titular: Griselda Andrea Caracciolo\n- CUIT/CUIL: 23-25079640-4\n\n📸 *Importante:* Una vez realizada la transferencia o el pago, envía la foto o captura del comprobante por este chat para confirmar tu envío.\n---\n\nREGLAS DE DERIVACIÓN Y RECEPCIÓN DE COMPROBANTE:\n1. POST-PAGO / ESPERA: Una vez enviada la plantilla con el link de pago y los datos de transferencia, dile al cliente: \"Quedo a la espera de tu comprobante. En cuanto lo envíes, un asesor humano de Bichtec lo validará para despachar tu paquete.\"\n2. RECEPCIÓN DE FOTO / COMPROBANTE (MODO PRUEBA): Si el cliente envía cualquier imagen o foto, asume inmediatamente que es el comprobante de pago recibido. Responde exactamente: \"¡Comprobante recibido con éxito! 📸 Hemos registrado tu pago y estamos derivando tu pedido a un representante humano de Bichtec para que prepare tu paquete y coordine el envío. ¡Muchas gracias por tu compra!\" y ejecuta la herramienta de derivación/pausa si corresponde.\n3. SOLICITUD DIRECTA O ERRORES: Si el cliente escribe explícitamente \"quiero hablar con un humano\", \"representante\", \"soporte\" o si realiza consultas que no pertenecen al catálogo, responde: \"Te transfiero en este momento con un asesor de Bichtec para que te ayude personalmente. Aguarda unos minutos por favor.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -64,
+        80
+      ],
+      "id": "029834a8-3543-4355-9fb3-db8ec8015a1e",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "ministral-14b-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        272
+      ],
+      "id": "745d5bee-6784-45d4-b04c-a7330abcc009",
+      "name": "n8n mistral whasasp",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5b6r0RjNB1RNP3Vn",
+          "name": "api mistral 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('¿Es /bot_on?').first().json.chat_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -336,
+        336
+      ],
+      "id": "e380a435-88b7-4cd9-9bf0-38624436a425",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Ejecuta esta herramienta al inicio para registrar o consultar el cliente en la base de datos y obtener su carrito activo usando su número de WhatsApp.",
+        "operation": "executeQuery",
+        "query": "WITH telefono_limpio AS (\n    SELECT REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '') AS num\n),\n-- 1. Registrar o verificar cliente\ncliente AS (\n    INSERT INTO clientes (telefono)\n    SELECT num FROM telefono_limpio\n    ON CONFLICT (telefono) DO UPDATE SET telefono = EXCLUDED.telefono\n    RETURNING id, telefono, estado\n),\n-- 2. Crear carrito activo si no existe\ncarrito AS (\n    INSERT INTO carritos (cliente_id, estado)\n    SELECT id, 'ACTIVO' FROM cliente\n    WHERE NOT EXISTS (\n        SELECT 1 FROM carritos WHERE cliente_id = (SELECT id FROM cliente) AND estado = 'ACTIVO'\n    )\n    RETURNING id, cliente_id\n),\ncarrito_final AS (\n    SELECT id, cliente_id FROM carritos WHERE cliente_id = (SELECT id FROM cliente) AND estado = 'ACTIVO'\n    UNION ALL\n    SELECT id, cliente_id FROM carrito\n    LIMIT 1\n)\n-- 3. Devolver datos del cliente y su carrito\nSELECT \n    cl.id AS cliente_id,\n    cl.telefono,\n    cl.estado AS estado_cliente,\n    cf.id AS carrito_id,\n    COALESCE(\n        json_agg(\n            json_build_object(\n                'producto_id', ci.producto_id,\n                'cantidad', ci.cantidad,\n                'precio_unitario', ci.precio_unitario\n            )\n        ) FILTER (WHERE ci.id IS NOT NULL), '[]'::json\n    ) AS items_carrito\nFROM cliente cl\nJOIN carrito_final cf ON cl.id = cf.cliente_id\nLEFT JOIN carrito_items ci ON cf.id = ci.carrito_id\nGROUP BY cl.id, cl.telefono, cl.estado, cf.id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        160,
+        368
+      ],
+      "id": "523b5398-388e-4043-b1b7-ea5aa7f515f9",
+      "name": "identificar_cliente_y_carrito",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utiliza esta herramienta cuando el cliente pida agregar, comprar o reservar un producto específico indicando el ID del producto y la cantidad.",
+        "operation": "executeQuery",
+        "query": "WITH cliente_actual AS (\n    SELECT id FROM clientes \n    WHERE telefono = REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '')\n    LIMIT 1\n),\ncarrito_existente AS (\n    SELECT id FROM carritos \n    WHERE cliente_id = (SELECT id FROM cliente_actual) AND estado = 'ACTIVO'\n    LIMIT 1\n),\nnuevo_carrito AS (\n    INSERT INTO carritos (cliente_id, estado)\n    SELECT id, 'ACTIVO' FROM cliente_actual\n    WHERE NOT EXISTS (SELECT 1 FROM carrito_existente)\n    RETURNING id\n),\ncarrito_final AS (\n    SELECT id FROM carrito_existente\n    UNION ALL\n    SELECT id FROM nuevo_carrito\n    LIMIT 1\n)\nINSERT INTO carrito_items (carrito_id, producto_id, cantidad, precio_unitario)\nVALUES (\n    (SELECT id FROM carrito_final),\n    {{ $fromAI('producto_id', 'El ID numérico del producto a agregar', 'number') }},\n    {{ $fromAI('cantidad', 'Cantidad de unidades que desea comprar el cliente', 'number') }},\n    (SELECT precio FROM productos WHERE id = {{ $fromAI('producto_id', 'El ID numérico del producto a agregar', 'number') }})\n)\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        -96,
+        368
+      ],
+      "id": "7918de84-ec0d-4569-b905-55e19bc386db",
+      "name": "agregar_al_carrito",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utiliza esta herramienta cuando el cliente confirme que desea cerrar la compra, finalizar el pedido o pedir el total para pagar. Convierte el carrito activo en un pedido confirmado y vacía el carrito.",
+        "operation": "executeQuery",
+        "query": "WITH cliente_actual AS (\n    SELECT id FROM clientes \n    WHERE telefono = REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '')\n    LIMIT 1\n),\n-- Marcar de forma automática que el cliente requiere atención humana\nactualizar_derivacion AS (\n    UPDATE clientes\n    SET requiere_humano = TRUE\n    WHERE id = (SELECT id FROM cliente_actual)\n    RETURNING id\n),\ncarrito_actual AS (\n    SELECT id FROM carritos \n    WHERE cliente_id = (SELECT id FROM cliente_actual) AND estado = 'ACTIVO'\n    LIMIT 1\n),\n-- 1. Crear el registro en la tabla pedidos sumando el total del carrito\nnuevo_pedido AS (\n    INSERT INTO pedidos (cliente_id, total, estado)\n    SELECT \n        (SELECT id FROM cliente_actual),\n        COALESCE(SUM(ci.cantidad * ci.precio_unitario), 0),\n        'PENDIENTE'\n    FROM carrito_items ci\n    WHERE ci.carrito_id = (SELECT id FROM carrito_actual)\n    HAVING COUNT(ci.id) > 0\n    RETURNING id, total, estado, creado_en\n),\n-- 2. Copiar los items del carrito a pedido_items\nmover_items AS (\n    INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario)\n    SELECT \n        (SELECT id FROM nuevo_pedido),\n        ci.producto_id,\n        ci.cantidad,\n        ci.precio_unitario\n    FROM carrito_items ci\n    WHERE ci.carrito_id = (SELECT id FROM carrito_actual)\n    RETURNING id\n),\n-- 3. Descontar el stock real de la tabla productos\ndescontar_stock AS (\n    UPDATE productos p\n    SET stock = p.stock - ci.cantidad\n    FROM carrito_items ci\n    WHERE ci.carrito_id = (SELECT id FROM carrito_actual) \n      AND p.id = ci.producto_id\n      AND EXISTS (SELECT 1 FROM mover_items)\n    RETURNING p.id\n),\n-- 4. Cerrar el carrito activo marcándolo como FINALIZADO y vaciar items\ncerrar_carrito AS (\n    UPDATE carritos \n    SET estado = 'FINALIZADO' \n    WHERE id = (SELECT id FROM carrito_actual) \n      AND EXISTS (SELECT 1 FROM mover_items)\n    RETURNING id\n),\nvaciar_carrito AS (\n    DELETE FROM carrito_items\n    WHERE carrito_id = (SELECT id FROM carrito_actual)\n      AND EXISTS (SELECT 1 FROM cerrar_carrito)\n)\n-- 5. Devolver la confirmación del pedido generado\nSELECT np.id AS pedido_id, np.total, np.estado, np.creado_en\nFROM nuevo_pedido np;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        272,
+        352
+      ],
+      "id": "f7a57130-8a4e-40ef-be1a-270da3d17fc2",
+      "name": "finalizar_compra",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Genera el link de pago en Mercado Pago. Requiere obligatoriamente el 'pedido_id' (ID del pedido generado en Postgres) y el 'total' (monto numérico total a cobrar).",
+        "workflowId": {
+          "__rl": true,
+          "value": "RxvZDWCwiIUsj4aL",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RxvZDWCwiIUsj4aL",
+          "cachedResultName": "Mercado Pago - Generar Link"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pedido_id": "={{ $fromAI('pedido_id', ``, 'string') }}",
+            "total": "={{ $fromAI('total', ``, 'number') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        192
+      ],
+      "id": "879b9ba5-44ca-46f7-a474-ab7ad4c2f489",
+      "name": "generar_link_pago"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Santiago Perez",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1120,
+        80
+      ],
+      "id": "559b9b3c-37ac-4ba9-bd31-6492333ffccb",
+      "name": "Webhook",
+      "webhookId": "100093d1-0f9d-44fa-aa08-b33b5dd620f4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://n8n-evolution-api.iotxoi.easypanel.host/message/sendText/{{ encodeURIComponent($('¿Es /bot_on?').first().json.intance_name) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('¿Es /bot_on?').first().json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('¿Es /bot_on?').first().json.chat_id }}\",\n  \"text\": {{ JSON.stringify($json.output) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        352,
+        48
+      ],
+      "id": "d646ae2e-6be7-4f45-b062-d84167a0b1c4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Utilizá esta herramienta para buscar productos en el catálogo de Bichtec, ver precios, descripciones, talles y disponibilidad de todos los artículos disponible.",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "productos",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        368
+      ],
+      "id": "867c4496-3a80-4d51-a795-46809e5c5eac",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "jFmu0oYCVhqCqbic",
+          "name": "Qdrant account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        416,
+        544
+      ],
+      "id": "7bfd8209-8a38-463b-8183-2ef4a8afd07d",
+      "name": "Embeddings Mistral Cloud",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5b6r0RjNB1RNP3Vn",
+          "name": "api mistral 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH cliente_actual AS (\n    SELECT id FROM clientes \n    WHERE telefono = REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '')\n    LIMIT 1\n),\ncarrito_actual AS (\n    SELECT id FROM carritos \n    WHERE cliente_id = (SELECT id FROM cliente_actual) AND estado = 'ACTIVO'\n    LIMIT 1\n)\nDELETE FROM carrito_items\nWHERE carrito_id = (SELECT id FROM carrito_actual)\n  AND producto_id = {{ $fromAI('producto_id', 'El ID numérico del producto a eliminar del carrito', 'number') }}\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        32,
+        384
+      ],
+      "id": "b0e09af4-02d0-45da-97bf-2f9f2213934a",
+      "name": "quitar_del_carrito",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clientes\nSET requiere_humano = TRUE\nWHERE telefono = REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '')\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        -224,
+        352
+      ],
+      "id": "cc4b021f-76a4-4fce-9e90-11e32d2e2675",
+      "name": "derivacion_humana",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT requiere_humano \nFROM clientes \nWHERE telefono = SPLIT_PART('{{ $('¿Es /bot_on?').item.json.chat_id }}', '@', 1);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -576,
+        96
+      ],
+      "id": "4169f8b6-ade1-49b5-b366-6f88ac4c7f0c",
+      "name": "Verificar Pausa Bot",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd2dfb68-6508-4b94-babc-8daec315796e",
+              "leftValue": "={{ $json.requiere_humano }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        80
+      ],
+      "id": "66bd0373-0258-44f1-ac31-cbef82844c97",
+      "name": "¿Atención Humana Activa?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT requiere_humano \nFROM clientes \nWHERE telefono = REPLACE('{{ $('Edit Fields').first().json.chat_id }}', '@s.whatsapp.net', '')\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        576,
+        48
+      ],
+      "id": "07fa8c60-4666-4456-bc67-eaf28bef0459",
+      "name": "Consultar Estado Post-Chat",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ce9507f4-4015-4e92-8b5a-6270c784d4fc",
+              "leftValue": "={{ $json.requiere_humano }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        272
+      ],
+      "id": "7cf761f6-89fc-4a9b-a6c8-3eb8d12409ec",
+      "name": "¿Disparar Alerta Sonora?"
+    },
+    {
+      "parameters": {
+        "chatId": "8221754265",
+        "text": "=🚨 ¡ATENCIÓN REQUERIDA EN BICHTEC!  📱 Cliente: {{ $('¿Es /bot_on?').first().json.chat_id }} ⚠️ Motivo: Venta finalizada / Cliente solicitó un humano.  Entrá a WhatsApp para continuar la atención.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        176
+      ],
+      "id": "dfda42b1-935f-4f67-a9c1-2594fb242186",
+      "name": "Alerta Telegram",
+      "webhookId": "a62d18cd-74c4-4231-bcec-472e9421a8cf",
+      "credentials": {
+        "telegramApi": {
+          "id": "3kiRZfMLxl8ncBnK",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "santiagus153@gmail.com",
+        "subject": "🛒 Nuevo Pedido / Derivación - Bichtec",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 500px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;\">   <h2 style=\"color: #111; border-bottom: 2px solid #D4AF37; padding-bottom: 8px;\">     🚨 Nueva atención requerida en Bichtec   </h2>   <p>Se ha registrado un evento de alta prioridad en el chatbot:</p>   <ul>     <li><b>Cliente (WhatsApp):</b> {{ $('¿Es /bot_on?').first().json.chat_id }}</li>     <li><b>Estado:</b> Requiere atención humana / Pedido generado</li>   </ul>   <p style=\"color: #856404; background-color: #fff8e1; padding: 10px; border-radius: 5px;\">     📌 Por favor, ingresá al chat de WhatsApp para continuar la atención.   </p> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        384
+      ],
+      "id": "77dc5ecb-eb80-44d2-b0bb-8d0578b557ef",
+      "name": "Registro Email Pedido",
+      "webhookId": "7036313e-faba-4015-827b-826c9b4819a2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "I7fgmZARr1sOwok5",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b3cd063b-b2e2-4343-89b7-f01d39e9bb9a",
+              "leftValue": "={{ $('¿Es /bot_on?').first().json.chat_message.toLowerCase().trim() }}",
+              "rightValue": "/bot_on",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -784,
+        96
+      ],
+      "id": "39444012-2f48-45df-a681-b386e36e4c60",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "79c8bba6-258f-4656-950a-9d67b8a1859b",
+              "name": "chat_id",
+              "value": "={{ $json.body.data.key.remoteJid }}",
+              "type": "string"
+            },
+            {
+              "id": "dc20b959-9abc-4a8d-a691-6b249c55e357",
+              "name": "intance_name",
+              "value": "={{ $json.body.instance }}",
+              "type": "string"
+            },
+            {
+              "id": "092f2041-4ccb-4081-bf9c-3f5d7bda6232",
+              "name": "apikey",
+              "value": "={{ $json.body.apikey }}",
+              "type": "string"
+            },
+            {
+              "id": "922b22a5-51df-40be-ae48-de054eb0d7ba",
+              "name": "url_server",
+              "value": "={{ $json.webhookUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -976,
+        80
+      ],
+      "id": "978c602b-8d81-4ccf-926d-413129be6710",
+      "name": "¿Es /bot_on?"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.bichtec.tech",
+            "user-agent": "axios/1.13.2",
+            "content-length": "1770",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "172.16.1.1",
+            "x-forwarded-host": "n8n.bichtec.tech",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "f946faca2150",
+            "x-real-ip": "172.16.1.1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "messages.upsert",
+            "instance": "Santiago Perez",
+            "data": {
+              "key": {
+                "remoteJid": "5493416569835@s.whatsapp.net",
+                "remoteJidAlt": "5493416569835@s.whatsapp.net",
+                "fromMe": false,
+                "id": "3EB066621645B0F508CD4C",
+                "participant": "",
+                "addressingMode": "lid"
+              },
+              "pushName": "Lautaro Perez",
+              "status": "DELIVERY_ACK",
+              "message": {
+                "messageContextInfo": {
+                  "threadId": [],
+                  "deviceListMetadata": {
+                    "senderKeyIndexes": [],
+                    "recipientKeyIndexes": [],
+                    "senderKeyHash": {
+                      "0": 149,
+                      "1": 136,
+                      "2": 237,
+                      "3": 52,
+                      "4": 36,
+                      "5": 43,
+                      "6": 87,
+                      "7": 124,
+                      "8": 245,
+                      "9": 192
+                    },
+                    "senderTimestamp": {
+                      "low": 1790817868,
+                      "high": 0,
+                      "unsigned": true
+                    },
+                    "senderAccountType": 0,
+                    "receiverAccountType": 0,
+                    "recipientKeyHash": {
+                      "0": 181,
+                      "1": 134,
+                      "2": 140,
+                      "3": 112,
+                      "4": 160,
+                      "5": 122,
+                      "6": 200,
+                      "7": 231,
+                      "8": 69,
+                      "9": 239
+                    },
+                    "recipientTimestamp": {
+                      "low": 1791408606,
+                      "high": 0,
+                      "unsigned": true
+                    }
+                  },
+                  "deviceListMetadataVersion": 2,
+                  "messageSecret": {
+                    "0": 116,
+                    "1": 131,
+                    "2": 175,
+                    "3": 152,
+                    "4": 204,
+                    "5": 59,
+                    "6": 245,
+                    "7": 24,
+                    "8": 140,
+                    "9": 129,
+                    "10": 31,
+                    "11": 9,
+                    "12": 68,
+                    "13": 161,
+                    "14": 196,
+                    "15": 138,
+                    "16": 61,
+                    "17": 119,
+                    "18": 203,
+                    "19": 2,
+                    "20": 104,
+                    "21": 38,
+                    "22": 222,
+                    "23": 173,
+                    "24": 85,
+                    "25": 180,
+                    "26": 132,
+                    "27": 113,
+                    "28": 68,
+                    "29": 124,
+                    "30": 150,
+                    "31": 210
+                  },
+                  "limitSharingV2": {
+                    "trigger": 0,
+                    "initiatedByMe": false
+                  }
+                },
+                "conversation": "hola"
+              },
+              "contextInfo": {
+                "mentionedJid": [],
+                "groupMentions": [],
+                "statusAttributions": [],
+                "ephemeralSettingTimestamp": {
+                  "low": 1791237898,
+                  "high": 0,
+                  "unsigned": false
+                },
+                "disappearingMode": {
+                  "initiator": 0,
+                  "trigger": 1,
+                  "initiatedByMe": false
+                }
+              },
+              "messageType": "conversation",
+              "messageTimestamp": 1791414400,
+              "instanceId": "96748f31-dde5-4e6f-8de7-6f1ef224dd66",
+              "source": "web"
+            },
+            "destination": "https://n8n.bichtec.tech/webhook/Santiago Perez",
+            "date_time": "2026-10-07T20:06:40.742Z",
+            "sender": "5493416569839@s.whatsapp.net",
+            "server_url": "https://n8n-evolution-api.iotxoi.easypanel.host",
+            "apikey": "2ABA7D4E92EF-41BF-B08D-2313AC35EC79"
+          },
+          "webhookUrl": "https://n8n.bichtec.tech/webhook/Santiago Perez",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "n8n mistral whasasp": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identificar_cliente_y_carrito": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agregar_al_carrito": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "finalizar_compra": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generar_link_pago": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "¿Es /bot_on?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "quitar_del_carrito": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "derivacion_humana": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Consultar Estado Post-Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Pausa Bot": {
+      "main": [
+        [
+          {
+            "node": "¿Atención Humana Activa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Atención Humana Activa?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Estado Post-Chat": {
+      "main": [
+        [
+          {
+            "node": "¿Disparar Alerta Sonora?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Disparar Alerta Sonora?": {
+      "main": [
+        [
+          {
+            "node": "Alerta Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerta Telegram": {
+      "main": [
+        [
+          {
+            "node": "Registro Email Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Verificar Pausa Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es /bot_on?": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "276af090-7f53-43ab-803c-ebdbc0cc466d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bc29e4f70c307f062dc78473f259a06f46dace79b701820b5361121bab3ca710"
+  },
+  "nodeGroups": [],
+  "id": "1jw3OM3YSf5twwnl",
+  "tags": []
+}

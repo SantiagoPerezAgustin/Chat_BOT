@@ -1,0 +1,177 @@
+{
+  "name": "Cargar Productos a Qdrant",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8e9ece7f-769d-4e6d-b605-1d1ad87b8ba7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM productos;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "075718d5-a2a9-4b6f-ac80-9f72fa952d3a",
+      "name": "traer los datos",
+      "credentials": {
+        "postgres": {
+          "id": "miAHiDeqxo0f94IJ",
+          "name": "el psotgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "productos",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "605baea9-13ec-4d55-9554-7e782ced1530",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "jFmu0oYCVhqCqbic",
+          "name": "Qdrant account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        416,
+        192
+      ],
+      "id": "c1a0f730-b0e0-4ed4-bd29-3d74d34f26e1",
+      "name": "Embeddings Mistral Cloud",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "5b6r0RjNB1RNP3Vn",
+          "name": "api mistral 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "=Producto: {{ $json.nombre }} - Descripción: {{ $json.descripcion }} - Precio: ${{ $json.precio }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "nombre",
+                "value": "={{ $json.nombre }}"
+              },
+              {
+                "name": "precio",
+                "value": "={{ $json.precio }}"
+              },
+              {
+                "name": "categoria",
+                "value": "={{ $json.categoria }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        208
+      ],
+      "id": "e4d10add-4582-4197-8215-f55e478b7beb",
+      "name": "Default Data Loader"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "traer los datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "traer los datos": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d0abafe7-8c06-49d6-bebb-788647a8e8a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bc29e4f70c307f062dc78473f259a06f46dace79b701820b5361121bab3ca710"
+  },
+  "nodeGroups": [],
+  "id": "5zyRVjh2oWbAf1kT",
+  "tags": []
+}

@@ -1,0 +1,109 @@
+{
+  "name": "Mercado Pago - Generar Link",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "pedido_id"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ed1d6d50-b3ba-4b09-a336-28c2e66f1ec5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mercadopago.com/checkout/preferences",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer APP_USR-5079594532586410-092515-610b6c942483c6e20625364e069e357e-493089277"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.preference_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "40ca0f8f-3827-4a57-a8b7-fb3ce759006b",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\n\n// Extraer valores o asignar valores por defecto si vienen vacíos\nconst pedido_id = inputData.pedido_id || \"1\";\nconst total = parseFloat(inputData.total) || 100;\n\nreturn [{\n  json: {\n    preference_body: {\n      items: [\n        {\n          title: `Pedido N° ${pedido_id} - Tienda E-commerce`,\n          quantity: 1,\n          unit_price: total,\n          currency_id: \"ARS\"\n        }\n      ],\n      back_urls: {\n        success: \"https://google.com\",\n        failure: \"https://google.com\"\n      },\n      auto_return: \"approved\"\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "45362c39-2531-4879-bf0f-5b0e8be5d3d6",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d72800ca-2670-4265-91c4-28cbe2b3e72f",
+  "meta": {
+    "instanceId": "bc29e4f70c307f062dc78473f259a06f46dace79b701820b5361121bab3ca710"
+  },
+  "nodeGroups": [],
+  "id": "RxvZDWCwiIUsj4aL",
+  "tags": []
+}
